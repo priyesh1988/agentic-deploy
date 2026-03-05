@@ -48,15 +48,59 @@ jobs:
           echo "Payload:"
           cat payload.json
 
-      - name: Call Agentic Deploy (Anthropic-powered)
+      # ✅ Start Agentic Deploy inside this GitHub-hosted runner
+      - name: Build Agentic Deploy image
         shell: bash
-        env:
-          # Priority: secret -> variable -> localhost (self-hosted runner / local)
-          GATE_URL: ${{ secrets.AGENTIC_GATE_URL || vars.AGENTIC_GATE_URL || 'http://localhost:8080' }}
         run: |
           set -euo pipefail
-          echo "Using GATE_URL=$GATE_URL"
+          docker build -t agentic-deploy:ci .
 
-          curl -sS -X POST "$GATE_URL/v1/evaluate" \
+      - name: Run Agentic Deploy container (Anthropic)
+        shell: bash
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL: claude-3-5-sonnet-latest
+        run: |
+          set -euo pipefail
+
+          # Create audit folder on runner for volume mount
+          mkdir -p data
+
+          docker run -d --name agentic-deploy \
+            -p 8080:8080 \
+            -e PORT=8080 \
+            -e MODE=anthropic \
+            -e ANTHROPIC_MODEL="$ANTHROPIC_MODEL" \
+            -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}" \
+            -e AUDIT_PATH=/data/audit.jsonl \
+            -v "$PWD/data:/data" \
+            agentic-deploy:ci
+
+      - name: Wait for health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..40}; do
+            if curl -fsS "http://localhost:8080/health" >/dev/null; then
+              echo "Gate is healthy"
+              exit 0
+            fi
+            sleep 0.5
+          done
+          echo "Gate did not become healthy in time"
+          docker logs agentic-deploy || true
+          exit 1
+
+      - name: Call Agentic Deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sS -X POST "http://localhost:8080/v1/evaluate" \
             -H "Content-Type: application/json" \
             -d @payload.json | jq .
+
+      - name: Print gate logs (always)
+        if: always()
+        shell: bash
+        run: |
+          docker logs agentic-deploy || true
