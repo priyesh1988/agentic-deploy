@@ -26,13 +26,10 @@ jobs:
           set -euo pipefail
 
           env="${{ github.event.inputs.environment || 'dev' }}"
-
-          # IMPORTANT: keep this on ONE line (no broken quotes)
           diff_summary="$(git log -1 --pretty=%B | tr '\n' ' ')"
 
           echo "env=$env" >> "$GITHUB_OUTPUT"
 
-          # Build JSON safely (handles quotes/apostrophes in commit messages)
           jq -n \
             --arg service "agentic-deploy-demo" \
             --arg env "$env" \
@@ -54,14 +51,11 @@ jobs:
       - name: Call Agentic Deploy (Anthropic-powered)
         shell: bash
         env:
-          GATE_URL: ${{ secrets.AGENTIC_GATE_URL }}
+          # Priority: secret -> variable -> localhost (self-hosted runner / local)
+          GATE_URL: ${{ secrets.AGENTIC_GATE_URL || vars.AGENTIC_GATE_URL || 'http://localhost:8080' }}
         run: |
           set -euo pipefail
-
-          if [ -z "${GATE_URL:-}" ]; then
-            echo "Missing secrets.AGENTIC_GATE_URL"
-            exit 1
-          fi
+          echo "Using GATE_URL=$GATE_URL"
 
           curl -sS -X POST "$GATE_URL/v1/evaluate" \
             -H "Content-Type: application/json" \
