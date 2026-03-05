@@ -1,4 +1,4 @@
-# Agentic Deploy (Anthropic Everywhere)
+# Agentic Deploy
 
 **Anthropic-powered** agentic AI gate for deployment pipelines across **dev / qa / prod**.
 It converts a deploy into a **traceable decision**: evidence → policy → risk → rollout plan → approvals → audit.
