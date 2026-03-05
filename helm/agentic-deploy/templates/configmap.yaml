@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentic-deploy-config
+data:
+  MODE: "{{ .Values.env.MODE }}"
+  ANTHROPIC_MODEL: "{{ .Values.env.ANTHROPIC_MODEL }}"
+  AUDIT_PATH: "{{ .Values.env.AUDIT_PATH }}"

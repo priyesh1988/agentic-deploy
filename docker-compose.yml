@@ -1,0 +1,16 @@
+services:
+  agentic-deploy:
+    build: .
+    environment:
+      PORT: "8080"
+      MODE: "anthropic"                 # anthropic|rules_only
+      ANTHROPIC_API_KEY: ""             # set in .env or your secrets manager
+      ANTHROPIC_MODEL: "claude-3-5-sonnet-latest"
+      AUDIT_PATH: "/data/audit.jsonl"
+      ENV_POLICY_DEV: "lenient"
+      ENV_POLICY_QA: "balanced"
+      ENV_POLICY_PROD: "strict"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data

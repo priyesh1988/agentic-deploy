@@ -1,0 +1,39 @@
+    name: agentic-gate
+
+    on:
+      workflow_dispatch:
+        inputs:
+          environment:
+            description: "Target environment (dev|qa|prod)"
+            required: true
+            default: "dev"
+      push:
+        branches: [ "main" ]
+
+    jobs:
+      evaluate:
+        runs-on: ubuntu-latest
+        permissions:
+          contents: read
+
+        steps:
+          - uses: actions/checkout@v4
+
+          - name: Prepare payload
+            id: payload
+            run: |
+              env="${{ github.event.inputs.environment || 'dev' }}"
+              diff_summary="$(git log -1 --pretty=%B | tr '
+' ' ')"
+              echo "env=$env" >> $GITHUB_OUTPUT
+              jq -n                 --arg service "agentic-deploy-demo"                 --arg env "$env"                 --arg change_id "${GITHUB_SHA}"                 --arg diff_summary "$diff_summary"                 '{service:$service, env:$env, change_id:$change_id, diff_summary:$diff_summary,
+                  manifests:[{kind:"Deployment", name:"agentic-deploy-demo", namespace:$env}],
+                  metrics_snapshot:{error_rate:0.002,p95_ms:180},
+                  strategy_preference:"canary"}' > payload.json
+              cat payload.json
+
+          - name: Call Agentic Deploy (Anthropic-powered)
+            env:
+              GATE_URL: ${{ secrets.AGENTIC_GATE_URL }}
+            run: |
+              curl -sS -X POST "$GATE_URL/v1/evaluate"                 -H "Content-Type: application/json"                 -d @payload.json | jq .

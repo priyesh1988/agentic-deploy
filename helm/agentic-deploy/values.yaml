@@ -1,0 +1,10 @@
+image:
+  repository: agentic-deploy
+  tag: latest
+service:
+  type: ClusterIP
+  port: 8080
+env:
+  MODE: anthropic
+  ANTHROPIC_MODEL: claude-3-5-sonnet-latest
+  AUDIT_PATH: /data/audit.jsonl

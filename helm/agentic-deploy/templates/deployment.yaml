@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentic-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: agentic-deploy }
+  template:
+    metadata:
+      labels: { app: agentic-deploy }
+    spec:
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports: [{ containerPort: 8080 }]
+          envFrom:
+            - configMapRef: { name: agentic-deploy-config }
+          env:
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-deploy-secrets
+                  key: ANTHROPIC_API_KEY
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 2
+            periodSeconds: 5
